@@ -67,6 +67,7 @@ def calculate_schedule(
     )
     return df
 
+
 # =========================
 # UI Streamlit
 # =========================
@@ -83,27 +84,23 @@ with col1:
     principal = st.number_input(
         "Сумма кредита",
         min_value=0,
-        value=0,
+        value=1_000_000,
         step=10000,
-        format="%d",
-        help="Введите сумму кредита",
-        placeholder="Например: 1_000_000"
+        help="Введите сумму кредита (например: 1_000_000)"
     )
     annual_rate = st.number_input(
         "Годовая ставка (%)",
         min_value=0.0,
-        value=0.0,
+        value=12.0,
         step=0.1,
-        help="Процентная ставка",
-        placeholder="Например: 12"
+        help="Процентная ставка (например: 12%)"
     )
     months = st.number_input(
         "Срок (месяцев)",
         min_value=1,
-        value=0,
+        value=36,
         step=1,
-        help="Введите срок кредита в месяцах",
-        placeholder="Например: 36"
+        help="Введите срок кредита в месяцах (например: 36)"
     )
 
 with col2:
@@ -138,16 +135,17 @@ if extra_payment_type != "none":
     extra_payment_amount = st.number_input(
         "Размер доп. платежа",
         min_value=0,
-        value=0,
+        value=50_000,
         step=10000,
-        placeholder="Например: 50_000"
+        help="Введите сумму дополнительного платежа"
     )
 if extra_payment_type == "periodic":
     extra_payment_frequency = st.number_input(
         "Периодичность (каждые N месяцев)",
         min_value=1,
         value=3,
-        step=1
+        step=1,
+        help="Каждые N месяцев будет доп. платеж"
     )
 
 # ===== Кнопка рассчитать =====
