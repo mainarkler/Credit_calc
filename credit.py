@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # =========================
-# Кэширование расчета
+# Функция расчёта кредита
 # =========================
 @st.cache_data
 def calculate_schedule(
@@ -20,7 +20,6 @@ def calculate_schedule(
     balance = principal
     schedule = []
 
-    # Расчет базового платежа
     if payment_type == "annuity":
         payment = balance * r / (1 - (1 + r) ** -n) if r != 0 else balance / n
     else:
@@ -29,18 +28,14 @@ def calculate_schedule(
     for month in range(1, n + 1):
         if balance <= 0:
             break
-
-        # Проценты
         interest = balance * r if interest_type == "compound" else principal * r
-
-        # Основной платеж
         if payment_type == "annuity":
             principal_payment = payment - interest
         else:
             principal_payment = principal_part
             payment = principal_payment + interest
 
-        # Доп. платеж
+        # Доп платеж
         extra_payment = 0
         if extra_payment_type == "one_time" and month == 1:
             extra_payment = extra_payment_amount
@@ -69,131 +64,115 @@ def calculate_schedule(
 
 
 # =========================
-# UI Streamlit
+# UI
 # =========================
-st.set_page_config(
-    page_title="Кредитный калькулятор",
-    page_icon="💳",
-    layout="wide"
-)
-st.title("💳 Кредитный калькулятор (Web-версия)")
+st.set_page_config(page_title="Кредитный калькулятор", page_icon="💳", layout="wide")
+st.title("💳 Кредитный калькулятор (Web)")
 
-# ========== Вводные параметры ==========
+# ===== Ввод через text_input/text_area с placeholder =====
 col1, col2 = st.columns(2)
 with col1:
-    principal = st.number_input(
+    principal_input = st.text_input(
         "Сумма кредита",
-        min_value=0,
-        value=1_000_000,
-        step=10000,
-        help="Введите сумму кредита (например: 1_000_000)"
+        placeholder="1000000",
+        help="Введите сумму кредита"
     )
-    annual_rate = st.number_input(
+    annual_rate_input = st.text_input(
         "Годовая ставка (%)",
-        min_value=0.0,
-        value=12.0,
-        step=0.1,
-        help="Процентная ставка (например: 12%)"
+        placeholder="12",
+        help="Процентная ставка"
     )
-    months = st.number_input(
+    months_input = st.text_input(
         "Срок (месяцев)",
-        min_value=1,
-        value=36,
-        step=1,
-        help="Введите срок кредита в месяцах (например: 36)"
+        placeholder="36",
+        help="Срок кредита"
     )
 
 with col2:
     payment_type = st.selectbox(
         "Тип платежа",
-        ["annuity", "diff"],
-        index=0,
-        format_func=lambda x: "Аннуитетный" if x == "annuity" else "Дифференцированный"
+        ["Аннуитетный", "Дифференцированный"]
     )
     interest_type = st.selectbox(
         "Тип начисления процентов",
-        ["compound", "simple"],
-        index=0,
-        format_func=lambda x: "Сложные" if x == "compound" else "Простые"
+        ["Сложные", "Простые"]
     )
 
-# ===== Дополнительные платежи =====
+# ===== Доп платежи =====
 st.subheader("Дополнительные платежи")
 extra_payment_type = st.selectbox(
     "Тип доп. платежа",
-    ["none", "one_time", "periodic"],
-    format_func=lambda x: {
-        "none": "Нет",
-        "one_time": "Единоразовый (1 месяц)",
-        "periodic": "Периодический"
-    }[x]
+    ["Нет", "Единоразовый (1 месяц)", "Периодический"]
 )
 
-extra_payment_amount = 0
-extra_payment_frequency = 1
-if extra_payment_type != "none":
-    extra_payment_amount = st.number_input(
+extra_payment_amount_input = ""
+extra_payment_frequency_input = "1"
+
+if extra_payment_type != "Нет":
+    extra_payment_amount_input = st.text_input(
         "Размер доп. платежа",
-        min_value=0,
-        value=50_000,
-        step=10000,
-        help="Введите сумму дополнительного платежа"
+        placeholder="50000"
     )
-if extra_payment_type == "periodic":
-    extra_payment_frequency = st.number_input(
+if extra_payment_type == "Периодический":
+    extra_payment_frequency_input = st.text_input(
         "Периодичность (каждые N месяцев)",
-        min_value=1,
-        value=3,
-        step=1,
-        help="Каждые N месяцев будет доп. платеж"
+        placeholder="3"
     )
 
 # ===== Кнопка рассчитать =====
 if st.button("Рассчитать"):
+    try:
+        principal = float(principal_input)
+        annual_rate = float(annual_rate_input)
+        months = int(months_input)
+        extra_payment_amount = float(extra_payment_amount_input) if extra_payment_amount_input else 0
+        extra_payment_frequency = int(extra_payment_frequency_input) if extra_payment_frequency_input else 1
+        payment_type_code = "annuity" if payment_type == "Аннуитетный" else "diff"
+        interest_type_code = "compound" if interest_type == "Сложные" else "simple"
+        extra_payment_type_code = None
+        if extra_payment_type == "Единоразовый (1 месяц)":
+            extra_payment_type_code = "one_time"
+        elif extra_payment_type == "Периодический":
+            extra_payment_type_code = "periodic"
 
-    # Без доп. платежей
-    df_base = calculate_schedule(
-        principal, annual_rate, months, payment_type, interest_type
-    )
-    total_payment_base = df_base["Платеж"].sum()
-    total_interest_base = df_base["Проценты"].sum()
+        # ===== Расчёт графиков =====
+        df_base = calculate_schedule(principal, annual_rate, months, payment_type_code, interest_type_code)
+        total_payment_base = df_base["Платеж"].sum()
+        total_interest_base = df_base["Проценты"].sum()
 
-    # С доп. платежами
-    if extra_payment_type == "none":
-        df_extra = df_base.copy()
-        total_payment_extra = total_payment_base
-        total_interest_extra = total_interest_base
-    else:
-        df_extra = calculate_schedule(
-            principal, annual_rate, months, payment_type, interest_type,
-            extra_payment_type, extra_payment_amount, extra_payment_frequency
-        )
-        total_payment_extra = df_extra["Платеж"].sum()
-        total_interest_extra = df_extra["Проценты"].sum()
+        if extra_payment_type_code is None:
+            df_extra = df_base.copy()
+            total_payment_extra = total_payment_base
+            total_interest_extra = total_interest_base
+        else:
+            df_extra = calculate_schedule(principal, annual_rate, months, payment_type_code,
+                                          interest_type_code, extra_payment_type_code, extra_payment_amount, extra_payment_frequency)
+            total_payment_extra = df_extra["Платеж"].sum()
+            total_interest_extra = df_extra["Проценты"].sum()
 
-    # ===== Итоги =====
-    st.subheader("Итоговые показатели")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("### С выбранными параметрами")
-        st.metric("Полная стоимость кредита", f"{total_payment_extra:,.2f}")
-        st.metric("Переплата (проценты)", f"{total_interest_extra:,.2f}")
+        # ===== Итоги =====
+        st.subheader("Итоговые показатели")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Полная стоимость кредита", f"{total_payment_extra:,.2f}")
+            st.metric("Переплата (проценты)", f"{total_interest_extra:,.2f}")
+        with col2:
+            if extra_payment_type_code is not None:
+                st.markdown(f"<span style='color:gray'>Полная стоимость: {total_payment_base:,.2f}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:gray'>Переплата: {total_interest_base:,.2f}</span>", unsafe_allow_html=True)
+                st.success(f"Экономия по процентам: {total_interest_base - total_interest_extra:,.2f}")
 
-    with col2:
-        if extra_payment_type != "none":
-            st.markdown("### Без доп. платежей")
-            st.markdown(f"<span style='color:gray'>Полная стоимость: {total_payment_base:,.2f}</span>", unsafe_allow_html=True)
-            st.markdown(f"<span style='color:gray'>Переплата: {total_interest_base:,.2f}</span>", unsafe_allow_html=True)
-            st.success(f"Экономия по процентам: {total_interest_base - total_interest_extra:,.2f}")
+        # ===== Таблица =====
+        st.subheader("График платежей")
+        st.dataframe(df_extra, use_container_width=True)
 
-    # ===== Таблица =====
-    st.subheader("График платежей")
-    st.dataframe(df_extra, use_container_width=True)
+        # ===== График =====
+        st.subheader("Динамика остатка долга")
+        chart_df = pd.DataFrame({
+            "Без доп. платежей": df_base.set_index("Месяц")["Остаток долга"],
+            "С доп. платежами": df_extra.set_index("Месяц")["Остаток долга"]
+        })
+        st.line_chart(chart_df)
 
-    # ===== График =====
-    st.subheader("Динамика остатка долга")
-    chart_df = pd.DataFrame({
-        "Без доп. платежей": df_base.set_index("Месяц")["Остаток долга"],
-        "С доп. платежами": df_extra.set_index("Месяц")["Остаток долга"]
-    })
-    st.line_chart(chart_df)
+    except ValueError:
+        st.error("Пожалуйста, введите корректные числовые значения в полях.")
