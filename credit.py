@@ -154,14 +154,14 @@ if st.button("Рассчитать"):
         st.subheader("Итоговые показатели")
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Полная стоимость кредита", f"{total_payment_extra:,.2f}")
-            st.metric("Переплата (проценты)", f"{total_interest_extra:,.2f}")
+            st.metric("Полная стоимость кредита", f"{total_payment_extra:,.2f}".replace(",", " "))
+            st.metric("Переплата (проценты)", f"{total_interest_extra:,.2f}".replace(",", " "))
+        
         with col2:
             if extra_payment_type_code is not None:
-                st.markdown(f"<span style='color:gray'>Полная стоимость: {total_payment_base:,.2f}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:gray'>Переплата: {total_interest_base:,.2f}</span>", unsafe_allow_html=True)
-                st.success(f"Экономия по процентам: {total_interest_base - total_interest_extra:,.2f}")
-
+                st.markdown(f"<span style='color:gray'>Полная стоимость: {total_payment_base:,.2f}".replace(",", " ") + "</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:gray'>Переплата: {total_interest_base:,.2f}".replace(",", " ") + "</span>", unsafe_allow_html=True)
+                st.success(f"Экономия по процентам: {(total_interest_base - total_interest_extra):,.2f}".replace(",", " "))
         # ===== Таблица =====
         st.subheader("График платежей")
         st.dataframe(df_extra, use_container_width=True)
